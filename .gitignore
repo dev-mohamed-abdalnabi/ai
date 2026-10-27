@@ -1,0 +1,6 @@
+build_tree/
+dist/
+*.jks
+local.properties
+.idea/
+.gradle/
