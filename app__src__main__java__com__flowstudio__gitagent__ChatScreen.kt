@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -120,7 +121,7 @@ fun ChatScreen(vm: ChatViewModel, onSettings: () -> Unit) {
         val count = vm.messages.size + (if (vm.busy) 1 else 0)
         if (count > 0) listState.animateScrollToItem(count - 1)
     }
-    val canSend = !vm.busy && (input.isNotBlank() || vm.pending.isNotEmpty())
+    val canSend = input.isNotBlank() || vm.pending.isNotEmpty()
 
     Box(Modifier.fillMaxSize()) {
         Box(
@@ -223,11 +224,12 @@ fun ChatScreen(vm: ChatViewModel, onSettings: () -> Unit) {
                             ),
                         )
                         FilledIconButton(
-                            onClick = { if (vm.send(input)) input = "" },
-                            enabled = canSend,
+                            onClick = { if (vm.busy) vm.stop() else if (vm.send(input)) input = "" },
+                            enabled = vm.busy || canSend,
                             modifier = Modifier.padding(bottom = 4.dp),
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.cd_send))
+                            if (vm.busy) Icon(Icons.Rounded.Stop, "إيقاف")
+                            else Icon(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.cd_send))
                         }
                     }
                 }
@@ -338,6 +340,11 @@ fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit) {
     var orKey by rememberSaveable { mutableStateOf(vm.store.orKey) }
     var gh by rememberSaveable { mutableStateOf(vm.store.ghToken) }
     var model by rememberSaveable { mutableStateOf(vm.store.model) }
+    var picking by rememberSaveable { mutableStateOf(false) }
+    if (picking) {
+        ModelPicker(vm, model, onPick = { model = it; picking = false }, onBack = { picking = false })
+        return
+    }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
             .verticalScroll(rememberScrollState()).padding(20.dp),
@@ -365,6 +372,10 @@ fun SettingsScreen(vm: ChatViewModel, onBack: () -> Unit) {
             supportingText = { Text(stringResource(R.string.model_hint)) },
             shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth(),
         )
+        FilledTonalButton(
+            onClick = { picking = true },
+            shape = CircleShape, modifier = Modifier.fillMaxWidth().height(52.dp),
+        ) { Text("اختار من كل الموديلات", fontWeight = FontWeight.Bold) }
         Button(
             onClick = {
                 vm.store.orKey = orKey

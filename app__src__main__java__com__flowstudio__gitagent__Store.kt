@@ -18,6 +18,6 @@ class Store(ctx: Context) {
         set(v) { p.edit().putString("model", v.trim().ifBlank { DEFAULT_MODEL }).apply() }
 
     companion object {
-        const val DEFAULT_MODEL = "openai/gpt-4o-mini"
+        const val DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
     }
 }

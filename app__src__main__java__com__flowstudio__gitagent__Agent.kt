@@ -2,9 +2,13 @@ package com.flowstudio.gitagent
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,12 +16,28 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipFile
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 data class Attachment(val id: String, val name: String, val size: Long, val file: File) {
     val isZip: Boolean get() = name.lowercase().endsWith(".zip")
 }
 
 class AgentException(message: String) : Exception(message)
+
+/** Cancellable OkHttp call: cancelling the coroutine cancels the network request. */
+private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
+    cont.invokeOnCancellation { cancel() }
+    enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            if (cont.isActive) cont.resumeWithException(e)
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (cont.isActive) cont.resume(response) else response.close()
+        }
+    })
+}
 
 private const val MAX_STEPS = 12
 private val DANGEROUS = setOf("github_create_repo", "github_upload_attachment", "github_delete_path")
@@ -135,7 +155,7 @@ $list
         val msgs = JSONArray().put(JSONObject().put("role", "system").put("content", systemPrompt()))
         history.forEach { msgs.put(it) }
         val body = JSONObject().put("model", store.model).put("messages", msgs)
-            .put("tools", TOOLS).put("tool_choice", "auto")
+            .put("tools", TOOLS).put("tool_choice", "auto").put("max_tokens", 4096)
         val req = Request.Builder().url("https://openrouter.ai/api/v1/chat/completions")
             .header("Authorization", "Bearer ${store.orKey}")
             .header("X-Title", "Flow Agent")
@@ -143,7 +163,7 @@ $list
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
         try {
-            client.newCall(req).execute().use { r ->
+            client.newCall(req).await().use { r ->
                 val text = r.body?.string() ?: ""
                 if (!r.isSuccessful) {
                     val m = try { JSONObject(text).getJSONObject("error").optString("message", text) } catch (e: Exception) { text.take(300) }

@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -41,6 +42,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var testResult by mutableStateOf("")
 
+    var models by mutableStateOf<List<ModelInfo>>(emptyList())
+        private set
+    var modelsLoading by mutableStateOf(false)
+        private set
+    var modelsError by mutableStateOf("")
+        private set
+
+    private var job: Job? = null
     private val all = mutableListOf<Attachment>()
     private val history = mutableListOf<JSONObject>()
     private var nextId = 1L
@@ -53,9 +62,36 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             f.delete()
             messages.add(UiMsg.Err(nid(), "التطبيق وقف بسبب خطأ المرة اللي فاتت: $first"))
         }
+        loadModels()
     }
 
     private fun nid() = nextId++
+
+    fun loadModels() {
+        if (modelsLoading) return
+        modelsLoading = true
+        modelsError = ""
+        val dir = getApplication<Application>().filesDir
+        viewModelScope.launch {
+            try {
+                val cached = withContext(Dispatchers.IO) { Models.readCache(dir) }
+                if (cached.isNotEmpty() && models.isEmpty()) models = cached
+                models = withContext(Dispatchers.IO) { Models.fetch(dir) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                modelsError = if (models.isEmpty()) "مقدرتش أحمّل قايمة الموديلات: ${e.message}"
+                else "مقدرتش أحدّث القايمة، بستخدم النسخة المحفوظة"
+            } finally {
+                modelsLoading = false
+            }
+        }
+    }
+
+    fun stop() {
+        confirmReq?.result?.complete(false)
+        job?.cancel()
+    }
 
     fun addFiles(uris: List<Uri>) {
         if (uris.isEmpty()) return
@@ -128,12 +164,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
         history.add(JSONObject().put("role", "user").put("content", content.ifBlank { "(attachments)" }))
         busy = true
-        viewModelScope.launch {
+        job = viewModelScope.launch {
             try {
                 val agent = Agent(store, { all.toList() }, { askConfirm(it) }, { statusText = it })
                 val reply = agent.run(history) { n, ok, s -> messages.add(UiMsg.Step(nid(), n, ok, s)) }
                 if (reply.isNotBlank()) messages.add(UiMsg.Bot(nid(), reply))
             } catch (e: CancellationException) {
+                messages.add(UiMsg.Err(nid(), "اتوقف."))
                 throw e
             } catch (e: Exception) {
                 messages.add(UiMsg.Err(nid(), e.message ?: "خطأ غير معروف"))
