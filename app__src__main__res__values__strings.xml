@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Flow Agent</string>
+    <string name="settings">الإعدادات</string>
+    <string name="or_key">مفتاح OpenRouter</string>
+    <string name="gh_token">توكن GitHub</string>
+    <string name="model">الموديل (OpenRouter model id)</string>
+    <string name="model_hint">لازم يكون موديل بيدعم Tools / Function calling</string>
+    <string name="save">حفظ</string>
+    <string name="test_gh">اختبار GitHub</string>
+    <string name="input_hint">اكتب مهمتك للـ Agent…</string>
+    <string name="thinking">بشتغل على الطلب…</string>
+    <string name="empty_title">أنا Flow Agent</string>
+    <string name="empty_sub">ارفق ZIP أو ملفات وقولي أرفعها على أنهي مستودع</string>
+    <string name="sug1">اعرض مستودعاتي</string>
+    <string name="sug2">ارفع المرفقات على مستودع </string>
+    <string name="confirm_title">تأكيد العملية</string>
+    <string name="confirm_ok">نفّذ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="cd_attach">إرفاق ملفات</string>
+    <string name="cd_send">إرسال</string>
+    <string name="cd_settings">الإعدادات</string>
+    <string name="cd_remove">إزالة</string>
+    <string name="cd_back">رجوع</string>
+    <string name="about">الإصدار %1$s (%2$s)</string>
+</resources>

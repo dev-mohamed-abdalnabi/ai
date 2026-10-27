@@ -1,0 +1,11 @@
+# Files (flat name -> real path; `__` = `/`)
+- settings.gradle.kts, build.gradle.kts, gradle.properties: Gradle root config
+- app__build.gradle.kts -> app/build.gradle.kts: module config, signing, dependencies
+- app__src__main__AndroidManifest.xml -> app/src/main/AndroidManifest.xml
+- app__src__main__java__com__flowstudio__gitagent__*.kt -> app/src/main/java/com/flowstudio/gitagent/: Util (hash/zip paths), Store (prefs), GitHub (API + commit upload), Agent (OpenRouter tool loop), ChatViewModel, ChatScreen (UI), Theme, MainActivity
+- app__src__test__java__...__GitHubTest.kt -> unit tests for Util
+- app__src__main__res__* -> app/src/main/res/*: strings, themes, colors, launcher icon
+- setup.sh: rebuilds the folder tree into build_tree/
+- test_keystore_b64.txt: public test signing key (base64)
+- .github/workflows/build.yml: build + publish APK to GitHub Releases
+- .gitignore, README.md, FILES.md
